@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import datetime as dt
 import numpy as np
 import pandas as pd
@@ -199,48 +200,24 @@ class InsiderAnalysis:
         return known_titles
 
     def _get_buy_sells(self):
-        trade_info = self.insider_trades[["trade_type", "quantity", "value"]]
-        # Vars for buying
-        buys = 0
-        buy_sum = 0
-        shares_bought = 0
-        # Vars for selling
-        sells = 0
-        sell_sum = 0
-        shares_sold = 0
 
-        outliers = 0
-        for i in trade_info.iterrows():
-            date, value = i
-            trade_type = value["trade_type"]
-            market_value = value["value"]
-            quantity = value["quantity"]
-            parsed_trade_type = trade_type.split(" ")
-
-            if parsed_trade_type[0] == "P":
-                buys += 1
-                buy_sum += market_value
-                shares_bought += quantity
-            elif parsed_trade_type[0] == "S":
-                sells += 1
-                sell_sum += market_value
-                shares_sold = quantity
-            else:
-                outliers += 1
-        net_trades = buy_sum - sell_sum
+        # Buy vars
+        total_buys = len(self.purchases)
+        buy_sum = self.purchases["value"].sum().item()
+        shares_bought = self.purchases["quantity"].sum().item()
+        # Sell vars
+        total_sells = len(self.sales)
+        sell_sum = self.sales["value"].sum().item()
+        shares_sold = self.sales["quantity"].sum().item()
+        # Net vars
+        net_trades = total_buys - total_sells
+        net_sum = buy_sum - sell_sum
+        net_quantity = shares_bought - shares_sold
 
         data = {
-            "buy": {
-                "total": buys,
-                "value": buy_sum,
-                "shares": shares_bought,
-            },
-            "sell": {
-                "total": sells,
-                "value": sell_sum,
-                "shares": shares_sold,
-            },
-            "net_trades": net_trades,
+            "buy": {"trades": total_buys, "value": buy_sum, "shares": shares_bought},
+            "sell": {"trades": total_sells, "value": sell_sum, "shares": shares_sold},
+            "net": {"trades": net_trades, "value": net_sum, "shares": net_quantity},
         }
         return data
 
@@ -282,8 +259,5 @@ class InsiderAnalysis:
 
 if __name__ == "__main__":
 
+    start = time.time()
     insider = InsiderAnalysis("Huang", "NVDA")
-
-    df = insider.get_sales()
-
-    print(df)
